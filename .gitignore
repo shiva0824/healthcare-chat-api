@@ -16,3 +16,5 @@ docker-compose.override.yml
 htmlcov/
 tests/__pycache__/
 uploads/
+app/__pycache__/
+__pycache__
