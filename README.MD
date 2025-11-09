@@ -58,6 +58,75 @@ Then open your browser at: http://127.0.0.1:8000/docs
 
 ---
 
+## **Document Upload and Processing Layer**
+
+This stage establishes the FastAPI backend for secure ingestion and structured processing of healthcare documents. It provides validated uploads, text extraction, and metadata management, the foundation for downstream AI workflows.
+
+### **Core Functionality**
+
+- **File Upload (`/api/v1/documents/upload`)**
+
+  - Accepts **PDF**, **DOCX**, and **TXT** files.
+  - Validates MIME type and limits file size to **10 MB**.
+  - Stores uploaded files temporarily in `uploads/`.
+  - Extracts text using:
+
+    - `PyPDF2` → PDFs
+    - `python-docx` → Word
+    - UTF-8 read → TXT
+
+  - Handles corrupted files and invalid formats gracefully.
+  - Returns metadata via the `DocumentResponse` Pydantic model.
+
+- **Metadata Storage**
+
+  - Maintains in-memory document registry (`documents_db`) for active session tracking.
+  - Each record stores file info, extraction length, and status.
+  - Future phases will replace this with persistent vector storage.
+
+### **Available Endpoints**
+
+| Method     | Endpoint                          | Description                         |
+| :--------- | :-------------------------------- | :---------------------------------- |
+| **GET**    | `/api/v1/health`                  | Service health check                |
+| **POST**   | `/api/v1/documents/upload`        | Upload and extract document text    |
+| **GET**    | `/api/v1/documents/`              | List all uploaded documents         |
+| **GET**    | `/api/v1/documents/{document_id}` | Retrieve specific document metadata |
+| **DELETE** | `/api/v1/documents/{document_id}` | Remove stored file and metadata     |
+
+### **Error Handling**
+
+| Scenario                 | HTTP Code | Message                 |
+| ------------------------ | --------- | ----------------------- |
+| Invalid file type        | 415       | Unsupported file type   |
+| File too large (> 10 MB) | 413       | File size exceeds limit |
+| Extraction failure       | 500       | Text extraction failed  |
+| Unknown document ID      | 404       | Document not found      |
+
+### **Logging**
+
+Centralized in `app/utils/logger.py`, recording all upload, extraction, and deletion events:
+
+```
+2025-10-20 22:14:33 | INFO | Uploaded lab_report.pdf (pdf)
+2025-10-20 22:15:47 | ERROR | Unsupported file type: image.jpeg
+```
+
+### **Design Notes**
+
+- Modular router structure for clean scaling (`documents`, `chat`).
+- In-memory DB for simplicity during development.
+- Strong Pydantic models ensure consistent API documentation.
+- Errors surfaced with accurate HTTP codes for clarity.
+
+### **Limitations**
+
+- No persistence beyond runtime.
+- Extraction limited to text-based PDFs (no OCR).
+- Sync I/O; async and streaming to be added later.
+
+Next, the pipeline will expand to include **text cleaning and semantic chunking** to prepare for embedding generation.
+
 ## Disclaimer ❗
 
 This project is for educational and demonstration purposes only.
